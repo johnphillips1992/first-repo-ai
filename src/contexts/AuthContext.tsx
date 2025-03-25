@@ -1,105 +1,104 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { User as FirebaseUser } from 'firebase/auth';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
-  auth, 
+  getAuth, 
+  createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
+  signOut, 
+  onAuthStateChanged,
+  User,
   updateProfile
-} from '../services/firebase';
-import { User, LoginFormData, RegisterFormData } from '../types';
+} from 'firebase/auth';
+import { app } from '../firebase/config';
 
 interface AuthContextProps {
-  user: User | null;
+  currentUser: User | null;
   loading: boolean;
-  error: string | null;
-  login: (data: LoginFormData) => Promise<void>;
-  register: (data: RegisterFormData) => Promise<void>;
-  signOut: () => Promise<void>;
+  register: (email: string, password: string, displayName: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUserProfile: (displayName: string) => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextProps>({
-  user: null,
-  loading: true,
-  error: null,
-  login: async () => {},
-  register: async () => {},
-  signOut: async () => {},
-});
+const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const auth = getAuth(app);
 
-  // Listen for auth state changes
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser) {
-        // Transform Firebase user to our User type
-        const transformedUser: User = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email!,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-        };
-        setUser(transformedUser);
-      } else {
-        setUser(null);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
       setLoading(false);
     });
 
-    // Cleanup subscription
-    return () => unsubscribe();
-  }, []);
+    return unsubscribe;
+  }, [auth]);
 
-  // Login with email and password
-  const login = async (data: LoginFormData): Promise<void> => {
+  const register = async (email: string, password: string, displayName: string) => {
     try {
-      setError(null);
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-    } catch (err: any) {
-      setError(err.message || 'Failed to log in');
-      throw err;
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Set user's display name
+      await updateProfile(userCredential.user, { displayName });
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
     }
   };
 
-  // Register new user with email and password
-  const register = async (data: RegisterFormData): Promise<void> => {
+  const login = async (email: string, password: string) => {
     try {
-      setError(null);
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      // Update profile with display name
-      if (userCredential.user) {
-        await updateProfile(userCredential.user, {
-          displayName: data.displayName
-        });
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to register');
-      throw err;
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
   };
 
-  // Sign out
-  const signOut = async (): Promise<void> => {
+  const logout = async () => {
     try {
-      await firebaseSignOut(auth);
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign out');
-      throw err;
+      await signOut(auth);
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw error;
+    }
+  };
+
+  const updateUserProfile = async (displayName: string) => {
+    if (!currentUser) {
+      throw new Error('No user is signed in');
+    }
+    
+    try {
+      await updateProfile(currentUser, { displayName });
+      // Force refresh of the user object
+      setCurrentUser({ ...currentUser });
+    } catch (error) {
+      console.error('Profile update error:', error);
+      throw error;
     }
   };
 
   const value = {
-    user,
+    currentUser,
     loading,
-    error,
-    login,
     register,
-    signOut,
+    login,
+    logout,
+    updateUserProfile
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
