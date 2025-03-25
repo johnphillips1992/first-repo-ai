@@ -3,17 +3,17 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
-import { MixtapeProvider } from './contexts/MixtapeContext';
-import './styles/global.css';
+import { PlaylistProvider } from './contexts/PlaylistContext';
+import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <MixtapeProvider>
+        <PlaylistProvider>
           <App />
-        </MixtapeProvider>
+        </PlaylistProvider>
       </AuthProvider>
     </BrowserRouter>
-  </React.StrictMode>
+  </React.StrictMode>,
 );
