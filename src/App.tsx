@@ -1,61 +1,42 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
-import Header from './components/layout/Header';
-import Footer from './components/layout/Footer';
+import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
+import CreateMixtapePage from './pages/CreateMixtapePage';
+import MixtapePlayerPage from './pages/MixtapePlayerPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import CreateMixtapePage from './pages/CreateMixtapePage';
-import MixtapeDetailsPage from './pages/MixtapeDetailsPage';
 import ProfilePage from './pages/ProfilePage';
-import NotFoundPage from './pages/NotFoundPage';
+import DiscoverPage from './pages/DiscoverPage';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './contexts/AuthContext';
 import './App.css';
 
-// Protected route component that redirects to login if not authenticated
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser, loading } = useAuth();
+const App: React.FC = () => {
+  const { loading } = useAuth();
   
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading-screen">Loading...</div>;
   }
   
-  if (!currentUser) {
-    return <Navigate to="/login" />;
-  }
-  
-  return <>{children}</>;
-};
-
-const App: React.FC = () => {
   return (
     <div className="app">
-      <Header />
+      <Navbar />
       <main className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/discover" element={<DiscoverPage />} />
+          <Route path="/mixtape/:id" element={<MixtapePlayerPage />} />
           <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/create-mixtape" 
+            path="/create" 
             element={
               <ProtectedRoute>
                 <CreateMixtapePage />
               </ProtectedRoute>
             } 
-          />
-          <Route 
-            path="/mixtape/:id" 
-            element={<MixtapeDetailsPage />} 
           />
           <Route 
             path="/profile" 
@@ -65,7 +46,6 @@ const App: React.FC = () => {
               </ProtectedRoute>
             } 
           />
-          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
       <Footer />
