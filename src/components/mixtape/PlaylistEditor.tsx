@@ -1,186 +1,114 @@
 import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { Track } from '../../contexts/PlaylistContext';
-import { searchTracks } from '../../services/musicService';
-import './PlaylistEditor.css';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { Song } from '../contexts/MixtapeContext';
+import MusicSearchModal from './MusicSearchModal';
+import './PlaylistManager.css';
 
-interface PlaylistEditorProps {
-  tracks: Track[];
-  onTracksChange: (tracks: Track[]) => void;
-  readOnly?: boolean;
+interface PlaylistManagerProps {
+  songs: Song[];
+  onSongsChange: (songs: Song[]) => void;
 }
 
-const PlaylistEditor: React.FC<PlaylistEditorProps> = ({ 
-  tracks, 
-  onTracksChange,
-  readOnly = false
-}) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Track[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [selectedService, setSelectedService] = useState<'spotify' | 'youtube' | 'applemusic'>('spotify');
+const PlaylistManager: React.FC<PlaylistManagerProps> = ({ songs, onSongsChange }) => {
+  const [playlist, setPlaylist] = useState<Song[]>(songs);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  
+  // Update internal state when props change
+  useEffect(() => {
+    setPlaylist(songs);
+  }, [songs]);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+  // Handle drag and drop reordering
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
     
-    setIsSearching(true);
-    try {
-      const results = await searchTracks(searchQuery, selectedService);
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Error searching tracks:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleAddTrack = (track: Track) => {
-    if (readOnly) return;
-    
-    onTracksChange([...tracks, track]);
-    setSearchQuery('');
-    setSearchResults([]);
-  };
-
-  const handleRemoveTrack = (index: number) => {
-    if (readOnly) return;
-    
-    const updatedTracks = [...tracks];
-    updatedTracks.splice(index, 1);
-    onTracksChange(updatedTracks);
-  };
-
-  const handleDragEnd = (result: any) => {
-    if (!result.destination || readOnly) return;
-    
-    const items = Array.from(tracks);
+    const items = Array.from(playlist);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
     
-    onTracksChange(items);
+    setPlaylist(items);
+    onSongsChange(items);
+  };
+
+  // Handle adding a song to the playlist
+  const handleAddSong = (song: Song) => {
+    const updatedPlaylist = [...playlist, song];
+    setPlaylist(updatedPlaylist);
+    onSongsChange(updatedPlaylist);
+    setIsSearchOpen(false);
+  };
+
+  // Handle removing a song from the playlist
+  const handleRemoveSong = (index: number) => {
+    const updatedPlaylist = [...playlist];
+    updatedPlaylist.splice(index, 1);
+    setPlaylist(updatedPlaylist);
+    onSongsChange(updatedPlaylist);
+  };
+
+  // Total duration of the playlist in seconds
+  const totalDuration = playlist.reduce((total, song) => {
+    return total + (song.duration || 0);
+  }, 0);
+
+  // Format duration from seconds to MM:SS
+  const formatDuration = (seconds: number) => {
+    const min = Math.floor(seconds / 60);
+    const sec = Math.floor(seconds % 60);
+    return `${min}:${sec < 10 ? '0' + sec : sec}`;
   };
 
   return (
-    <div className="playlist-editor">
-      {!readOnly && (
-        <div className="search-section">
-          <div className="search-bar">
-            <input
-              type="text"
-              placeholder="Search for tracks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            />
-            <button 
-              className="search-btn"
-              onClick={handleSearch}
-              disabled={isSearching}
-            >
-              {isSearching ? 'Searching...' : 'Search'}
-            </button>
-          </div>
-          
-          <div className="service-selector">
-            <button 
-              className={`service-btn ${selectedService === 'spotify' ? 'active' : ''}`}
-              onClick={() => setSelectedService('spotify')}
-            >
-              Spotify
-            </button>
-            <button 
-              className={`service-btn ${selectedService === 'youtube' ? 'active' : ''}`}
-              onClick={() => setSelectedService('youtube')}
-            >
-              YouTube
-            </button>
-            <button 
-              className={`service-btn ${selectedService === 'applemusic' ? 'active' : ''}`}
-              onClick={() => setSelectedService('applemusic')}
-            >
-              Apple Music
-            </button>
-          </div>
-          
-          {searchResults.length > 0 && (
-            <div className="search-results">
-              <h3>Search Results</h3>
-              <ul className="results-list">
-                {searchResults.map((track) => (
-                  <li key={track.id} className="result-item">
-                    <img 
-                      src={track.imageUrl} 
-                      alt={track.title} 
-                      className="track-image"
-                    />
-                    <div className="track-info">
-                      <div className="track-title">{track.title}</div>
-                      <div className="track-artist">{track.artist}</div>
-                    </div>
-                    <button 
-                      className="add-btn"
-                      onClick={() => handleAddTrack(track)}
-                    >
-                      <i className="fas fa-plus"></i>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
+    <div className="playlist-manager">
+      <div className="playlist-header">
+        <h3>Mixtape Playlist</h3>
+        <button 
+          className="add-song-button" 
+          onClick={() => setIsSearchOpen(true)}
+          aria-label="Add song to playlist"
+        >
+          Add Song
+        </button>
+      </div>
       
-      <div className="playlist-section">
-        <h3>Tracks</h3>
-        {tracks.length === 0 ? (
-          <div className="empty-playlist">
-            {readOnly 
-              ? 'This mixtape is empty.' 
-              : 'Search for tracks to add to your mixtape.'}
-          </div>
-        ) : (
+      {playlist.length === 0 ? (
+        <div className="empty-playlist">
+          Your mixtape is empty! Click "Add Song" to start building your playlist.
+        </div>
+      ) : (
+        <div className="playlist-container">
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="playlist">
               {(provided) => (
-                <ul 
-                  className="playlist-tracks"
+                <ul
+                  className="song-list"
                   {...provided.droppableProps}
                   ref={provided.innerRef}
                 >
-                  {tracks.map((track, index) => (
-                    <Draggable 
-                      key={track.id} 
-                      draggableId={track.id} 
-                      index={index}
-                      isDragDisabled={readOnly}
-                    >
+                  {playlist.map((song, index) => (
+                    <Draggable key={song.id} draggableId={song.id} index={index}>
                       {(provided) => (
                         <li
-                          className="playlist-item"
+                          className="song-item"
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
                         >
-                          <div className="track-number">{index + 1}.</div>
-                          <img 
-                            src={track.imageUrl} 
-                            alt={track.title} 
-                            className="track-image"
-                          />
-                          <div className="track-info">
-                            <div className="track-title">{track.title}</div>
-                            <div className="track-artist">{track.artist}</div>
+                          <div className="song-number">{index + 1}</div>
+                          <div className="song-info">
+                            <h4>{song.title}</h4>
+                            <p>{song.artist}</p>
                           </div>
-                          {!readOnly && (
-                            <button 
-                              className="remove-btn"
-                              onClick={() => handleRemoveTrack(index)}
-                            >
-                              <i className="fas fa-times"></i>
-                            </button>
-                          )}
+                          <div className="song-duration">
+                            {song.duration ? formatDuration(song.duration) : '--:--'}
+                          </div>
+                          <button 
+                            className="remove-song-button" 
+                            onClick={() => handleRemoveSong(index)}
+                            aria-label={`Remove ${song.title} from playlist`}
+                          >
+                            ✕
+                          </button>
                         </li>
                       )}
                     </Draggable>
@@ -190,10 +118,22 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
               )}
             </Droppable>
           </DragDropContext>
-        )}
-      </div>
+          
+          <div className="playlist-info">
+            <div>{playlist.length} songs</div>
+            <div>Total time: {formatDuration(totalDuration)}</div>
+          </div>
+        </div>
+      )}
+      
+      {isSearchOpen && (
+        <MusicSearchModal 
+          onAddSong={handleAddSong} 
+          onClose={() => setIsSearchOpen(false)} 
+        />
+      )}
     </div>
   );
 };
 
-export default PlaylistEditor;
+export default PlaylistManager;
