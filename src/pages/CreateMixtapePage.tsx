@@ -1,94 +1,93 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePlaylist, Track } from '../contexts/PlaylistContext';
-import CassetteDeck from '../components/mixtape/CassetteDeck';
-import PlaylistEditor from '../components/mixtape/PlaylistEditor';
-import NoteEditor from '../components/mixtape/NoteEditor';
+import { useMixtape, Song } from '../contexts/MixtapeContext';
+import PlaylistManager from '../components/PlaylistManager';
+import NoteEditor from '../components/NoteEditor';
 import './CreateMixtapePage.css';
 
 const CreateMixtapePage: React.FC = () => {
   const navigate = useNavigate();
-  const { createMixtape } = usePlaylist();
+  const { createMixtape } = useMixtape();
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [coverImage, setCoverImage] = useState('');
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [note, setNote] = useState('');
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [notes, setNotes] = useState('');
   const [isPublic, setIsPublic] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+  // Handle cover image upload
+  const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      setErrors({ ...errors, coverImage: 'Please upload a valid image file (JPEG, PNG, GIF)' });
+      return;
+    }
+
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setErrors({ ...errors, coverImage: 'Image file should be less than 2MB' });
+      return;
+    }
+
+    // Convert to base64 for preview and storage
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setCoverImage(result);
+      setErrors({ ...errors, coverImage: '' });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Validate form before submission
   const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
+    const newErrors: Record<string, string> = {};
     
     if (!title.trim()) {
       newErrors.title = 'Title is required';
     }
     
-    if (tracks.length === 0) {
-      newErrors.tracks = 'At least one track is required';
+    if (songs.length === 0) {
+      newErrors.songs = 'You need to add at least one song to your mixtape';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm() || isSubmitting) return;
     
     setIsSubmitting(true);
+    
     try {
       const mixtapeId = await createMixtape({
         title,
         description,
-        coverImage: coverImage || '/default-mixtape-cover.jpg',
-        tracks,
-        note,
-        createdBy: '',  // This will be set by the backend
-        collaborators: [],
+        coverImage: coverImage || '/default-mixtape.jpg', // Use default if none uploaded
+        songs,
+        notes,
+        createdBy: '', // This will be set by the createMixtape function
         isPublic
       });
       
+      // Navigate to the new mixtape page
       navigate(`/mixtape/${mixtapeId}`);
     } catch (error) {
       console.error('Error creating mixtape:', error);
-      setErrors({ submit: 'Failed to create mixtape. Please try again.' });
+      setErrors({ ...errors, submit: 'Failed to create mixtape. Please try again.' });
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    // Check file type and size
-    if (!file.type.startsWith('image/')) {
-      setErrors({ coverImage: 'Please upload an image file' });
-      return;
-    }
-    
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors({ coverImage: 'Image size should be less than 5MB' });
-      return;
-    }
-    
-    setUploadingImage(true);
-    try {
-      // In a real app, you would upload to a storage service
-      // For this example, we'll use a local URL
-      const imageUrl = URL.createObjectURL(file);
-      setCoverImage(imageUrl);
-      setErrors({});
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      setErrors({ coverImage: 'Failed to upload image. Please try again.' });
-    } finally {
-      setUploadingImage(false);
     }
   };
 
@@ -96,8 +95,10 @@ const CreateMixtapePage: React.FC = () => {
     <div className="create-mixtape-page">
       <h1>Create Your Mixtape</h1>
       
-      <form onSubmit={handleSubmit} className="create-mixtape-form">
+      <form onSubmit={handleSubmit} className="mixtape-form">
         <div className="form-section">
+          <h2>Mixtape Details</h2>
+          
           <div className="form-group">
             <label htmlFor="title">Title</label>
             <input
@@ -105,53 +106,46 @@ const CreateMixtapePage: React.FC = () => {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="My Awesome Mixtape"
-              className={errors.title ? 'error' : ''}
+              placeholder="Enter mixtape title"
+              maxLength={50}
             />
             {errors.title && <div className="error-message">{errors.title}</div>}
           </div>
           
           <div className="form-group">
-            <label htmlFor="description">Description</label>
+            <label htmlFor="description">Description (optional)</label>
             <textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What's this mixtape all about?"
-              rows={3}
+              placeholder="What's this mixtape about?"
+              maxLength={200}
             />
           </div>
           
           <div className="form-group">
-            <label htmlFor="coverImage">Cover Image</label>
-            <div className="image-upload">
+            <label htmlFor="coverImage">Cover Image (optional)</label>
+            <div className="cover-image-container">
+              {coverImage ? (
+                <img src={coverImage} alt="Mixtape cover" className="cover-preview" />
+              ) : (
+                <div className="cover-placeholder">Upload a cover image</div>
+              )}
               <input
                 type="file"
                 id="coverImage"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="file-input"
+                onChange={handleCoverImageUpload}
+                accept="image/jpeg, image/png, image/gif"
               />
-              <div className="image-preview">
-                {coverImage ? (
-                  <img src={coverImage} alt="Cover Preview" />
-                ) : (
-                  <div className="no-image">No image selected</div>
-                )}
-              </div>
-              <label htmlFor="coverImage" className="upload-btn">
-                {uploadingImage ? 'Uploading...' : 'Choose Image'}
-              </label>
             </div>
-            {errors.coverImage && (
-              <div className="error-message">{errors.coverImage}</div>
-            )}
+            {errors.coverImage && <div className="error-message">{errors.coverImage}</div>}
           </div>
           
           <div className="form-group">
-            <label className="checkbox-label">
+            <label htmlFor="isPublic" className="checkbox-label">
               <input
                 type="checkbox"
+                id="isPublic"
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
               />
@@ -161,51 +155,38 @@ const CreateMixtapePage: React.FC = () => {
         </div>
         
         <div className="form-section">
-          <h2>Add Tracks</h2>
-          <PlaylistEditor 
-            tracks={tracks} 
-            onTracksChange={setTracks} 
+          <PlaylistManager
+            songs={songs}
+            onSongsChange={setSongs}
           />
-          {errors.tracks && <div className="error-message">{errors.tracks}</div>}
+          {errors.songs && <div className="error-message">{errors.songs}</div>}
         </div>
         
         <div className="form-section">
-          <h2>Add a Note</h2>
-          <NoteEditor 
-            initialNote={note} 
-            onSave={setNote} 
-          />
-        </div>
-        
-        <div className="mixtape-preview">
-          <h2>Preview</h2>
-          <CassetteDeck 
-            tracks={tracks} 
-            coverImage={coverImage || '/default-mixtape-cover.jpg'} 
-            title={title || 'Untitled Mixtape'} 
+          <NoteEditor
+            initialNote={notes}
+            onNoteChange={setNotes}
           />
         </div>
         
         <div className="form-actions">
-          <button 
-            type="submit" 
-            className="submit-btn"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Creating Mixtape...' : 'Create Mixtape'}
-          </button>
-          <button 
-            type="button" 
-            className="cancel-btn"
-            onClick={() => navigate('/dashboard')}
+          <button
+            type="button"
+            className="cancel-button"
+            onClick={() => navigate(-1)}
           >
             Cancel
           </button>
+          <button
+            type="submit"
+            className="create-button"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Creating...' : 'Create Mixtape'}
+          </button>
         </div>
         
-        {errors.submit && (
-          <div className="error-message submit-error">{errors.submit}</div>
-        )}
+        {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
       </form>
     </div>
   );
