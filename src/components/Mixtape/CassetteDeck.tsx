@@ -1,191 +1,121 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './CassetteDeck.css';
-import { Track } from '../../contexts/PlaylistContext';
 
 interface CassetteDeckProps {
-  tracks: Track[];
-  coverImage: string;
-  title: string;
+  isPlaying: boolean;
+  onPlayPause: () => void;
+  onRewind: () => void;
+  onFastForward: () => void;
+  onStop: () => void;
+  onEject: () => void;
+  coverImage?: string;
+  mixtapeTitle: string;
 }
 
-const CassetteDeck: React.FC<CassetteDeckProps> = ({ tracks, coverImage, title }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [isEjected, setIsEjected] = useState(false);
-  const [animation, setAnimation] = useState('');
+const CassetteDeck: React.FC<CassetteDeckProps> = ({
+  isPlaying,
+  onPlayPause,
+  onRewind,
+  onFastForward,
+  onStop,
+  onEject,
+  coverImage,
+  mixtapeTitle
+}) => {
+  const [reelPosition, setReelPosition] = useState(0);
+  const [isRewinding, setIsRewinding] = useState(false);
+  const [isFastForwarding, setIsFastForwarding] = useState(false);
+  const animationRef = useRef<number | null>(null);
 
-  // Refs for tape reels
-  const leftReelRef = useRef<HTMLDivElement>(null);
-  const rightReelRef = useRef<HTMLDivElement>(null);
-
-  // Simulated audio playback
+  // Handle tape animation
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (isPlaying && tracks.length > 0) {
-      // Rotate the reels
-      animateReels(true);
-      
-      // Move to the next track every 30 seconds (simulated playback)
-      interval = setInterval(() => {
-        setCurrentTrackIndex((prevIndex) => {
-          if (prevIndex >= tracks.length - 1) {
-            // Stop at the end of the playlist
-            setIsPlaying(false);
-            return prevIndex;
-          }
-          return prevIndex + 1;
-        });
-      }, 30000);
-    } else {
-      animateReels(false);
+    if (!isPlaying && !isRewinding && !isFastForwarding) {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+      return;
     }
+
+    let speed = 1;
+    if (isRewinding) speed = -5;
+    if (isFastForwarding) speed = 5;
+
+    const animate = () => {
+      setReelPosition((prev) => {
+        // Loop the animation
+        let newPosition = prev + speed;
+        if (newPosition > 100) newPosition = 0;
+        if (newPosition < 0) newPosition = 100;
+        return newPosition;
+      });
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
     };
-  }, [isPlaying, tracks]);
+  }, [isPlaying, isRewinding, isFastForwarding]);
 
-  const animateReels = (active: boolean) => {
-    if (leftReelRef.current && rightReelRef.current) {
-      if (active) {
-        leftReelRef.current.style.animation = 'spin 2s linear infinite';
-        rightReelRef.current.style.animation = 'spin 2s linear infinite';
-      } else {
-        leftReelRef.current.style.animation = 'none';
-        rightReelRef.current.style.animation = 'none';
-      }
-    }
-  };
-
-  const handlePlay = () => {
-    if (tracks.length === 0) return;
-    
-    setIsPlaying(true);
-    setAnimation('tape-playing');
-  };
-
-  const handlePause = () => {
-    setIsPlaying(false);
-    setAnimation('');
-  };
-
-  const handleStop = () => {
-    setIsPlaying(false);
-    setCurrentTrackIndex(0);
-    setAnimation('');
-  };
-
-  const handleEject = () => {
-    setIsPlaying(false);
-    setIsEjected(!isEjected);
-    setAnimation(isEjected ? 'tape-inserting' : 'tape-ejecting');
-    
-    // Reset after animation
+  const handleRewind = () => {
+    setIsRewinding(true);
+    onRewind();
+    // Simulate rewinding for 2 seconds
     setTimeout(() => {
-      if (!isEjected) {
-        setCurrentTrackIndex(0);
-      }
-    }, 1000);
+      setIsRewinding(false);
+    }, 2000);
   };
 
   const handleFastForward = () => {
-    if (currentTrackIndex < tracks.length - 1) {
-      setCurrentTrackIndex(currentTrackIndex + 1);
-    }
+    setIsFastForwarding(true);
+    onFastForward();
+    // Simulate fast-forwarding for 2 seconds
+    setTimeout(() => {
+      setIsFastForwarding(false);
+    }, 2000);
   };
-
-  const handleRewind = () => {
-    if (currentTrackIndex > 0) {
-      setCurrentTrackIndex(currentTrackIndex - 1);
-    }
-  };
-
-  const currentTrack = tracks[currentTrackIndex];
 
   return (
     <div className="cassette-deck">
-      <div className="cassette-window">
-        <div className={`cassette ${isEjected ? 'ejected' : ''} ${animation}`}>
+      <div className="cassette-deck-top">
+        <div className="cassette-deck-display">
+          <div className="cassette-title">{mixtapeTitle}</div>
+          {isPlaying && <div className="playing-indicator">PLAYING</div>}
+          {isRewinding && <div className="rewind-indicator">REWINDING</div>}
+          {isFastForwarding && <div className="fastforward-indicator">FAST FORWARDING</div>}
+        </div>
+      </div>
+      
+      <div className="cassette-container">
+        <div className="cassette">
           <div className="cassette-label">
-            <img 
-              src={coverImage || '/default-mixtape-cover.jpg'} 
-              alt={title} 
-              className="cassette-cover"
-            />
-            <div className="cassette-title">{title}</div>
+            {coverImage ? (
+              <img src={coverImage} alt={mixtapeTitle} className="cassette-cover" />
+            ) : (
+              <div className="cassette-default-cover">{mixtapeTitle}</div>
+            )}
           </div>
-          <div className="cassette-reels">
-            <div className="reel left-reel" ref={leftReelRef}></div>
-            <div className="tape"></div>
-            <div className="reel right-reel" ref={rightReelRef}></div>
+          <div className="cassette-window">
+            <div className="tape-reel left-reel" style={{ transform: `rotate(${reelPosition * 3.6}deg)` }}></div>
+            <div className="tape-reel right-reel" style={{ transform: `rotate(${reelPosition * 3.6}deg)` }}></div>
+            <div className="tape-path"></div>
           </div>
         </div>
       </div>
       
-      <div className="deck-display">
-        {tracks.length > 0 && currentTrack ? (
-          <div className="track-info">
-            <div className="track-title">{currentTrack.title}</div>
-            <div className="track-artist">{currentTrack.artist}</div>
-          </div>
-        ) : (
-          <div className="no-tracks">No tracks available</div>
-        )}
-        <div className="track-counter">
-          Track {tracks.length > 0 ? currentTrackIndex + 1 : 0} of {tracks.length}
-        </div>
-      </div>
-      
-      <div className="deck-controls">
-        <button 
-          className="control-btn rewind-btn" 
-          onClick={handleRewind}
-          disabled={isEjected || currentTrackIndex === 0}
-        >
-          <i className="fas fa-backward"></i>
+      <div className="cassette-controls">
+        <button className="control-btn" onClick={onPlayPause} aria-label={isPlaying ? "Pause" : "Play"}>
+          {isPlaying ? '⏸️' : '▶️'}
         </button>
-        
-        {isPlaying ? (
-          <button 
-            className="control-btn pause-btn" 
-            onClick={handlePause}
-            disabled={isEjected}
-          >
-            <i className="fas fa-pause"></i>
-          </button>
-        ) : (
-          <button 
-            className="control-btn play-btn" 
-            onClick={handlePlay}
-            disabled={isEjected || tracks.length === 0}
-          >
-            <i className="fas fa-play"></i>
-          </button>
-        )}
-        
-        <button 
-          className="control-btn stop-btn" 
-          onClick={handleStop}
-          disabled={isEjected}
-        >
-          <i className="fas fa-stop"></i>
-        </button>
-        
-        <button 
-          className="control-btn ff-btn" 
-          onClick={handleFastForward}
-          disabled={isEjected || currentTrackIndex === tracks.length - 1}
-        >
-          <i className="fas fa-forward"></i>
-        </button>
-        
-        <button 
-          className="control-btn eject-btn" 
-          onClick={handleEject}
-        >
-          <i className={`fas fa-${isEjected ? 'sign-in-alt' : 'eject'}`}></i>
-        </button>
+        <button className="control-btn" onClick={handleRewind} aria-label="Rewind">⏪</button>
+        <button className="control-btn" onClick={onStop} aria-label="Stop">⏹️</button>
+        <button className="control-btn" onClick={handleFastForward} aria-label="Fast Forward">⏩</button>
+        <button className="control-btn" onClick={onEject} aria-label="Eject">⏏️</button>
       </div>
     </div>
   );
