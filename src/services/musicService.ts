@@ -1,34 +1,13 @@
 import axios from 'axios';
-import { Track } from '../contexts/PlaylistContext';
+import { Song } from '../contexts/MixtapeContext';
 
-export async function searchTracks(
-  query: string, 
-  service: 'spotify' | 'youtube' | 'applemusic'
-): Promise<Track[]> {
+// Search for music using the serverless API
+export const searchMusic = async (query: string): Promise<Song[]> => {
   try {
-    const response = await axios.get(
-      `/api/musicSearch?query=${encodeURIComponent(query)}&service=${service}`
-    );
-    
+    const response = await axios.get(`/api/music-search?q=${encodeURIComponent(query)}`);
     return response.data;
   } catch (error) {
-    console.error('Error searching tracks:', error);
-    throw new Error('Failed to search tracks');
+    console.error('Error searching for music:', error);
+    throw new Error('Failed to search for music');
   }
-}
-
-export async function getTrackById(
-  id: string, 
-  service: 'spotify' | 'youtube' | 'applemusic'
-): Promise<Track | null> {
-  try {
-    const response = await axios.get(
-      `/api/musicTrack?id=${id}&service=${service}`
-    );
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error getting track:', error);
-    return null;
-  }
-}
+};
