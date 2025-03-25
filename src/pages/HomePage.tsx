@@ -1,22 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMixtape } from '../hooks/useMixtape';
-import { useAuth } from '../hooks/useAuth';
 import MixtapeCard from '../components/Mixtape/MixtapeCard';
-import LoadingSpinner from '../components/UI/LoadingSpinner';
 
 const HomePage: React.FC = () => {
-  const { user } = useAuth();
-  const { publicMixtapes, userMixtapes, loading, error } = useMixtape();
   const [selectedTab, setSelectedTab] = useState<'featured' | 'your'>('featured');
 
-  const displayedMixtapes = selectedTab === 'featured' 
-    ? publicMixtapes 
-    : userMixtapes;
-
-  if (loading) {
-    return <LoadingSpinner />;
-  }
 
   return (
     <div>

@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMixtape, Song } from '../contexts/MixtapeContext';
-import PlaylistManager from '../components/PlaylistManager';
-import NoteEditor from '../components/NoteEditor';
 import './CreateMixtapePage.css';
 
 const CreateMixtapePage: React.FC = () => {
@@ -12,8 +10,8 @@ const CreateMixtapePage: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [coverImage, setCoverImage] = useState('');
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [notes, setNotes] = useState('');
+  const [songs] = useState<Song[]>([]);
+  const [notes] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -153,21 +151,7 @@ const CreateMixtapePage: React.FC = () => {
             </label>
           </div>
         </div>
-        
-        <div className="form-section">
-          <PlaylistManager
-            songs={songs}
-            onSongsChange={setSongs}
-          />
-          {errors.songs && <div className="error-message">{errors.songs}</div>}
-        </div>
-        
-        <div className="form-section">
-          <NoteEditor
-            initialNote={notes}
-            onNoteChange={setNotes}
-          />
-        </div>
+
         
         <div className="form-actions">
           <button
