@@ -1,0 +1,252 @@
+.cassette-deck {
+  background-color: #333;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 500px;
+  margin: 0 auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.cassette-window {
+  position: relative;
+  height: 200px;
+  background-color: #222;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cassette {
+  width: 300px;
+  height: 180px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  position: relative;
+  transition: transform 0.5s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.cassette.ejected {
+  transform: translateY(-200px);
+}
+
+.cassette.tape-ejecting {
+  animation: eject 1s ease forwards;
+}
+
+.cassette.tape-inserting {
+  animation: insert 1s ease forwards;
+}
+
+.cassette.tape-playing {
+  animation: slight-vibrate 0.5s infinite;
+}
+
+.cassette-label {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  height: 80px;
+  background-color: white;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  overflow: hidden;
+}
+
+.cassette-cover {
+  height: 50px;
+  width: 50px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.cassette-title {
+  font-family: var(--font-handwritten);
+  font-size: 12px;
+  margin-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.cassette-reels {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reel {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(#666, #333);
+  position: relative;
+}
+
+.reel::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background-color: #111;
+  border-radius: 50%;
+}
+
+.tape {
+  height: 2px;
+  background-color: #111;
+  flex-grow: 1;
+  margin: 0 10px;
+}
+
+.deck-display {
+  background-color: #222;
+  color: #0f0;
+  padding: 10px;
+  border-radius: 4px;
+  font-family: monospace;
+  margin-bottom: 20px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.track-info {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.track-title {
+  font-size: 16px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-counter {
+  font-size: 12px;
+  text-align: right;
+}
+
+.no-tracks {
+  text-align: center;
+  font-style: italic;
+}
+
+.deck-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.control-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #444;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.control-btn:hover:not(:disabled) {
+  background-color: #555;
+}
+
+.control-btn:active:not(:disabled) {
+  background-color: #666;
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.play-btn {
+  background-color: #4caf50;
+}
+
+.pause-btn {
+  background-color: #ff9800;
+}
+
+.stop-btn {
+  background-color: #f44336;
+}
+
+@keyframes eject {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-200px); }
+}
+
+@keyframes insert {
+  0% { transform: translateY(-200px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes slight-vibrate {
+  0% { transform: translateY(0); }
+  25% { transform: translateY(-1px); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(1px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 500px) {
+  .cassette {
+    width: 250px;
+    height: 150px;
+  }
+  
+  .cassette-label {
+    height: 60px;
+  }
+  
+  .cassette-reels {
+    height: 60px;
+  }
+  
+  .reel {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .control-btn {
+    width: 40px;
+    height: 40px;
+  }
+}
